@@ -1,0 +1,12 @@
+bin/
+/qooq
+
+# goreleaser 產物
+dist/
+
+# 交叉編譯測試的產物
+*.exe
+
+# AI 開發筆記（給 Claude Code 等 agent 讀的本機檔，不進公開 repo）
+CLAUDE.md
+.claude/

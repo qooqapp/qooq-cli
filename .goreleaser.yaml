@@ -1,0 +1,76 @@
+# goreleaser builds and publishes the qooq CLI.
+#
+#   local dry run:  goreleaser release --snapshot --clean
+#   real release:   push a tag; .github/workflows/release.yml does the rest
+#
+# Through the pinned image the dry run needs GOTOOLCHAIN=auto (it ships an
+# older Go than go.mod requires), and the parent directory mounted so ../qooq
+# resolves:
+#
+#   docker run --rm -v "$PWD/..:/src" -w /src/qooq-cli -e GOTOOLCHAIN=auto \
+#     goreleaser/goreleaser:v2.5.1 release --snapshot --clean
+#
+# This module depends on github.com/qooqapp/qooq through a `replace` pointing
+# at a sibling checkout, so any build — here or in CI — needs that repository
+# checked out at ../qooq. The release workflow does it explicitly.
+version: 2
+
+project_name: qooq-cli
+
+builds:
+  - id: qooq
+    main: ./cmd/qooq
+    binary: qooq
+    env:
+      - CGO_ENABLED=0
+    goos: [linux, darwin]
+    goarch: [amd64, arm64]
+    flags: [-trimpath]
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+
+archives:
+  - id: qooq
+    builds: [qooq]
+    name_template: "qooq-cli_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format: tar.gz
+    files:
+      - README.md
+      - LICENSE*
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  use: git
+  sort: asc
+  groups:
+    - title: Features
+      regexp: '^feat(\(.+\))?:'
+      order: 0
+    - title: Fixes
+      regexp: '^fix(\(.+\))?:'
+      order: 1
+    - title: Build and release
+      regexp: '^(build|ci)(\(.+\))?:'
+      order: 2
+    - title: Other
+      order: 99
+  filters:
+    exclude:
+      - '^docs(\(.+\))?:'
+      - '^test(\(.+\))?:'
+      - '^chore(\(.+\))?:'
+
+release:
+  draft: false
+  prerelease: auto
+  header: |
+    ## qooq CLI {{ .Tag }}
+
+    The command-line client for qooqd and qooq-watcher, which ship from
+    [qooqapp/qooq](https://github.com/qooqapp/qooq).
+
+    Install: download the archive for your platform, extract, and put `qooq`
+    somewhere on your PATH. Verify with `qooq --version`.

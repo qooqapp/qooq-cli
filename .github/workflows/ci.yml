@@ -1,0 +1,48 @@
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          path: qooq-cli
+
+      # go.mod reaches github.com/qooqapp/qooq through a `replace` to a sibling
+      # directory, so nothing here builds without it.
+      #
+      # No tag is checked out for it: the tip of the matching line is what the
+      # next release will build against, so building against the tip is what
+      # catches a wire-DTO change on the qooq side breaking the CLI, which is
+      # the failure this job exists to find.
+      #
+      # Always qooq's main.
+      - uses: actions/checkout@v5
+        with:
+          repository: qooqapp/qooq
+          path: qooq
+          ref: main
+
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: qooq-cli/go.mod
+          cache: true
+
+      - run: make check
+        working-directory: qooq-cli
+      # No test files today, so this passes trivially — it is here so the first
+      # one added is run rather than quietly ignored.
+      - run: make test
+        working-directory: qooq-cli
+      - run: make build
+        working-directory: qooq-cli
+      # up_windows.go exists only to keep this compiling for a platform the
+      # daemons do not support. Nothing else builds it, so it rots unnoticed.
+      # Compilation only — not a claim that it runs.
+      - run: GOOS=windows GOARCH=amd64 go build ./...
+        working-directory: qooq-cli
