@@ -561,12 +561,12 @@ func (o *projectOpts) finish(cmd *cobra.Command, c *controlclient.Client, acct s
 		return nil
 	case statusNeedsInput:
 		_ = o.print(out, p)
-		key := "KEY"
-		if len(p.MissingInputs) > 0 {
-			key = p.MissingInputs[0]
+		if len(p.MissingInputs) == 0 {
+			// Waiting on another component, not on a value; see finishLocal.
+			return fmt.Errorf("waiting: %s. It deploys on its own once that is up", orDash(p.LastBuildError))
 		}
 		return fmt.Errorf("needs input: qooq.yaml declares values that have no answer yet (%s). Supply them with `qooq project input %s -n %s %s=<value>` (or in the console); that redeploys",
-			orDash(p.LastBuildError), p.Name, p.Namespace, key)
+			orDash(p.LastBuildError), p.Name, p.Namespace, p.MissingInputs[0])
 	default:
 		_ = o.print(out, p)
 		// The full message is already on the last_error row above; this is

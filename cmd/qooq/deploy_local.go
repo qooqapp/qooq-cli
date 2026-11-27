@@ -208,12 +208,14 @@ func finishLocal(cmd *cobra.Command, wc *watcherclient.Client, t *watcherclient.
 		}
 		return nil
 	case statusNeedsInput:
-		key := "NAME"
-		if len(t.MissingInputs) > 0 {
-			key = t.MissingInputs[0]
+		if len(t.MissingInputs) == 0 {
+			// Not a missing value: it waits for another component to be
+			// deployed. The watcher's message names which; telling the user
+			// to set an input here sends them after a value nobody asked for.
+			return fmt.Errorf("waiting: %s. It deploys on its own once that is up", orDash(t.LastBuildError))
 		}
 		return fmt.Errorf("needs input: qooq.yaml declares values that have no answer yet (%s). Supply them with `qooq watch set-input %s %s=<value>`; that redeploys",
-			strings.Join(t.MissingInputs, ", "), t.Name, key)
+			strings.Join(t.MissingInputs, ", "), t.Name, t.MissingInputs[0])
 	default:
 		msg, _, _ := strings.Cut(orDash(t.LastBuildError), "\n")
 		fmt.Fprintln(errw, "deploy "+t.LastBuildStatus+": "+msg)
